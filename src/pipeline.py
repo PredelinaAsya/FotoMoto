@@ -1,5 +1,6 @@
 import cv2
 import os
+import rawpy
 from typing import Tuple
 
 from src.stages import Segmentator, match_motorcycles_and_pilots
@@ -8,7 +9,7 @@ from src.stages import Segmentator, match_motorcycles_and_pilots
 class Processing:
     def __init__(
         self, images_folder: str,
-        support_img_formats: Tuple[str] = ('jpg', 'png'),
+        support_img_formats: Tuple[str] = ('jpg', 'png', 'cr2'),
         model_type: str = 'yolov8n-seg',
         person_label: int = 0, moto_label: int = 3,
         conf_thr: float = 0.3, iou_thr: float = 0.7,
@@ -39,7 +40,11 @@ class Processing:
                 f'Input image: {img_path} has unsupported format. List of supported formats: {self.support_img_formats}')
         
         # read image
-        image = cv2.imread(img_path)
+        if img_path.lower().endswith('.cr2'):
+            raw = rawpy.imread(img_path) # access to the RAW image
+            image = raw.postprocess() # a numpy RGB array
+        else:
+            image = cv2.imread(img_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # segment motorcycles and pilots
