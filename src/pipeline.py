@@ -12,7 +12,7 @@ class Processing:
         support_img_formats: Tuple[str] = ('jpg', 'png', 'cr2'),
         model_type: str = 'yolov8n-seg',
         person_label: int = 0, moto_label: int = 3,
-        conf_thr: float = 0.3, iou_thr: float = 0.7,
+        conf_thr: float = 0.2, iou_thr: float = 0.65,
     ):
         if not os.path.exists(images_folder):
             raise ValueError(f'Input folder: {images_folder} does not exist')
