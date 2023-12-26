@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import os
 import rawpy
 from typing import Tuple
@@ -62,3 +63,39 @@ class Processing:
         matched_moto_to_pilots = match_motorcycles_and_pilots(person_boxes, moto_boxes)
 
         return segment_results, matched_moto_to_pilots, image
+    
+    def get_processed_masks_on_image(self, img_path: str):
+        segment_results, matched_moto_to_pilots, image = self.get_moto_masks_on_image(img_path)
+        h, w, _ = image.shape
+
+        person_ids = [
+            i for i, box in enumerate(segment_results.boxes)
+            if box.cls == self.segmentator.person_label
+        ]
+        moto_ids = [
+            i for i, box in enumerate(segment_results.boxes)
+            if box.cls == self.segmentator.moto_label
+        ]
+        
+        masks = segment_results.masks
+        boxes = segment_results.boxes
+
+        processed_masks = []
+
+        if masks is not None:
+            masks = masks.data.cpu()
+
+            for moto_bbox_id, person_bbox_ids in matched_moto_to_pilots.items():
+                det_ids = [moto_ids[moto_bbox_id]]
+                det_ids.extend([person_ids[person_bbox_id] for person_bbox_id in person_bbox_ids])
+
+                for idx in det_ids:
+                    seg, box = masks.numpy()[idx], boxes[idx]
+                        
+                    seg = cv2.resize(seg, (w, h))
+                    colored_mask = np.expand_dims(seg, 0).repeat(3, axis=0)
+                    colored_mask = np.moveaxis(colored_mask, 0, -1)
+
+                    processed_masks.append(colored_mask)
+            
+        return processed_masks
