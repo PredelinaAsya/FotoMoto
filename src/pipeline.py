@@ -96,6 +96,6 @@ class Processing:
                     colored_mask = np.expand_dims(seg, 0).repeat(3, axis=0)
                     colored_mask = np.moveaxis(colored_mask, 0, -1)
 
-                    processed_masks.append(colored_mask)
+                    processed_masks.append(np.round(colored_mask))
             
         return processed_masks
