@@ -1,7 +1,12 @@
 import cv2
+from multiprocessing import Pool
 import numpy as np
 import os
+# from parallelbar import progress_imap
 import rawpy
+# from tqdm import tqdm
+import time
+import threading
 from typing import Tuple
 
 from src.stages import Segmentator, match_motorcycles_and_pilots, compute_embedding_by_separate_channels
@@ -31,6 +36,11 @@ class Processing:
             moto_label=moto_label, conf_thr=conf_thr,
             iou_thr=iou_thr,
         )
+
+        # self.pbar_for_parallel_part = tqdm(
+        #     total=len(self.img_paths[:4]),
+        #     desc='Parallel segmentation, masks postprocessing and color embeddings computation'
+        # )
 
     def get_moto_masks_on_image(self, img_path: str):
         if not os.path.exists(img_path):
@@ -113,3 +123,23 @@ class Processing:
             color_embs.append(color_embedding)
 
         return color_embs
+    
+    def compute_embs_process(self, img_path):
+        processed_masks, image = self.get_processed_masks_on_image(img_path)
+        color_embs = self.compute_color_embeddings_by_separate_channels_on_image(
+            image, processed_masks,
+        )
+
+        return color_embs
+
+    def process_all_images(self, processes: int = 4, first_n_images: int = 100):
+        moto_embs = []
+
+        with Pool(processes) as pool:
+            moto_embs = pool.map(self.compute_embs_process, self.img_paths[:first_n_images])
+
+        img_path_to_embs_and_masks = {
+            img_path:embs for img_path, embs in zip(self.img_paths, moto_embs)
+        }
+
+        return img_path_to_embs_and_masks
