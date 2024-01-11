@@ -4,7 +4,7 @@ import os
 import rawpy
 from typing import Tuple
 
-from src.stages import Segmentator, match_motorcycles_and_pilots
+from src.stages import Segmentator, match_motorcycles_and_pilots, compute_embedding_by_separate_channels
 
 
 class Processing:
@@ -98,4 +98,18 @@ class Processing:
 
                     processed_masks.append(np.round(colored_mask))
             
-        return processed_masks
+        return processed_masks, image
+
+    def compute_color_embeddings_by_separate_channels_on_image(
+        self, rgb_img, moto_masks, hsv_flag=True, intervals_count=256,
+    ):  
+        color_embs = []
+
+        for moto_mask in moto_masks:
+            color_embedding = compute_embedding_by_separate_channels(
+                rgb_img, moto_mask, hsv_flag=hsv_flag,
+                intervals_count=intervals_count,
+            )
+            color_embs.append(color_embedding)
+
+        return color_embs
