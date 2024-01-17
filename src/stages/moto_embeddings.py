@@ -32,16 +32,19 @@ def compute_embedding_by_union_channels(
     image = rgb_img.copy()
     if hsv_flag:
         image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+
+    _, _, channels = image.shape
     
     divider = input_color_dim // out_color_dim
     image = np.floor(np.divide(image, divider).astype(int))
     
-    args = np.argwhere(moto_mask[:, :, 0])
-    xpos = image[args, 0].astype(np.float32).reshape(-1)
-    ypos = image[args, 1].astype(np.float32).reshape(-1)
-    zpos = image[args, 2].astype(np.float32).reshape(-1)
+    pos = []
+
+    for idx in range(channels):
+        args = np.argwhere(moto_mask[:, :, idx])
+        pos.append(image[args[:, 0], args[:, 1], idx].astype(np.float32).reshape(-1))
     
-    encoded_triplets_arr = xpos * out_color_dim ** 2 + ypos * out_color_dim + zpos
+    encoded_triplets_arr = pos[0] * out_color_dim ** 2 + pos[1] * out_color_dim + pos[2]
     emb_dim = out_color_dim ** 3
     
     pixels_in_mask = moto_mask[:, :, 0].sum()
