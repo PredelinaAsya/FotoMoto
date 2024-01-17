@@ -7,9 +7,9 @@ import rawpy
 # from tqdm import tqdm
 import time
 import threading
-from typing import Tuple
+from typing import Tuple, Literal
 
-from src.stages import Segmentator, match_motorcycles_and_pilots, compute_embedding_by_separate_channels
+from src.stages import Segmentator, match_motorcycles_and_pilots, compute_embedding_by_separate_channels, compute_embedding_by_union_channels
 
 
 class Processing:
@@ -20,6 +20,7 @@ class Processing:
         person_label: int = 0, moto_label: int = 3,
         conf_thr: float = 0.2, iou_thr: float = 0.65,
         hsv_flag: bool = True, intervals_count: int = 256,
+        embedding_type: Literal['separate', 'union'] = 'separate',
     ):
         if not os.path.exists(images_folder):
             raise ValueError(f'Input folder: {images_folder} does not exist')
@@ -40,6 +41,7 @@ class Processing:
 
         self.hsv_flag = hsv_flag
         self.intervals_count = intervals_count
+        self.embedding_type = embedding_type
 
     def get_moto_masks_on_image(self, img_path: str):
         if not os.path.exists(img_path):
@@ -123,11 +125,31 @@ class Processing:
 
         return color_embs
     
+    def compute_color_embeddings_by_union_channels_on_image(
+        self, rgb_img, moto_masks,
+    ):  
+        color_embs = []
+
+        for moto_mask in moto_masks:
+            color_embedding = compute_embedding_by_union_channels(
+                rgb_img, moto_mask, hsv_flag=self.hsv_flag,
+                out_color_dim=self.intervals_count,
+            )
+            color_embs.append(color_embedding)
+
+        return color_embs
+    
     def compute_embs_process(self, img_path):
         processed_masks, image = self.get_processed_masks_on_image(img_path)
-        color_embs = self.compute_color_embeddings_by_separate_channels_on_image(
-            image, processed_masks,
-        )
+
+        if self.embedding_type == 'separate':
+            color_embs = self.compute_color_embeddings_by_separate_channels_on_image(
+                image, processed_masks,
+            )
+        else:
+            color_embs = self.compute_color_embeddings_by_union_channels_on_image(
+                image, processed_masks,
+            )
 
         return color_embs
 
