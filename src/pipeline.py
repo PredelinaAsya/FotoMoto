@@ -19,6 +19,7 @@ class Processing:
         model_type: str = 'yolov8n-seg',
         person_label: int = 0, moto_label: int = 3,
         conf_thr: float = 0.2, iou_thr: float = 0.65,
+        hsv_flag: bool = True, intervals_count: int = 256,
     ):
         if not os.path.exists(images_folder):
             raise ValueError(f'Input folder: {images_folder} does not exist')
@@ -37,10 +38,8 @@ class Processing:
             iou_thr=iou_thr,
         )
 
-        # self.pbar_for_parallel_part = tqdm(
-        #     total=len(self.img_paths[:4]),
-        #     desc='Parallel segmentation, masks postprocessing and color embeddings computation'
-        # )
+        self.hsv_flag = hsv_flag
+        self.intervals_count = intervals_count
 
     def get_moto_masks_on_image(self, img_path: str):
         if not os.path.exists(img_path):
@@ -56,7 +55,7 @@ class Processing:
             image = raw.postprocess() # a numpy RGB array
         else:
             image = cv2.imread(img_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # segment motorcycles and pilots
         segment_results = self.segmentator.segment(image)[0]
@@ -111,14 +110,14 @@ class Processing:
         return processed_masks, image
 
     def compute_color_embeddings_by_separate_channels_on_image(
-        self, rgb_img, moto_masks, hsv_flag=True, intervals_count=256,
+        self, rgb_img, moto_masks,
     ):  
         color_embs = []
 
         for moto_mask in moto_masks:
             color_embedding = compute_embedding_by_separate_channels(
-                rgb_img, moto_mask, hsv_flag=hsv_flag,
-                intervals_count=intervals_count,
+                rgb_img, moto_mask, hsv_flag=self.hsv_flag,
+                intervals_count=self.intervals_count,
             )
             color_embs.append(color_embedding)
 
@@ -132,11 +131,11 @@ class Processing:
 
         return color_embs
 
-    def process_all_images(self, processes: int = 4, first_n_images: int = 100):
+    def process_all_images(self, processes: int = 4):
         moto_embs = []
 
         with Pool(processes) as pool:
-            moto_embs = pool.map(self.compute_embs_process, self.img_paths[:first_n_images])
+            moto_embs = pool.map(self.compute_embs_process, self.img_paths)
 
         img_path_to_embs_and_masks = {
             img_path:embs for img_path, embs in zip(self.img_paths, moto_embs)
