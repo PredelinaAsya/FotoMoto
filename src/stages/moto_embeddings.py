@@ -50,7 +50,7 @@ def compute_embedding_by_union_channels(
     pixels_in_mask = moto_mask[:, :, 0].sum()
 
     H, _ = np.histogram(
-        encoded_triplets_arr, bins=emb_dim-1, range=(0,emb_dim-1),
+        encoded_triplets_arr, bins=emb_dim, range=(0,emb_dim),
         density=False
     )
     
