@@ -3,6 +3,7 @@ from multiprocessing import Pool
 import numpy as np
 import os
 import rawpy
+from shutil import copy2
 from typing import Tuple, Literal
 
 from src.stages import (
@@ -17,12 +18,14 @@ from src.stages import (
 class Processing:
     def __init__(
         self, images_folder: str,
+        results_folder: str,
         support_img_formats: Tuple[str] = ('jpg', 'png', 'cr2'),
         model_type: str = 'yolov8n-seg',
         person_label: int = 0, moto_label: int = 3,
         conf_thr: float = 0.2, iou_thr: float = 0.65,
         hsv_flag: bool = True, intervals_count: int = 256,
         embedding_type: Literal['separate', 'union'] = 'separate',
+        k_min: int = 10, k_max: int = 100,
     ):
         if not os.path.exists(images_folder):
             raise ValueError(f'Input folder: {images_folder} does not exist')
@@ -35,6 +38,11 @@ class Processing:
             if img_name.lower().endswith(self.support_img_formats)
         ]
 
+        if not os.path.exists(results_folder):
+            os.makedirs(results_folder, exist_ok=True)
+
+        self.results_folder = results_folder
+
         self.segmentator = Segmentator(
             model_type=model_type, person_label=person_label,
             moto_label=moto_label, conf_thr=conf_thr,
@@ -44,6 +52,8 @@ class Processing:
         self.hsv_flag = hsv_flag
         self.intervals_count = intervals_count
         self.embedding_type = embedding_type
+        self.min_k = k_min
+        self.max_k = k_max
 
     def get_moto_masks_on_image(self, img_path: str):
         if not os.path.exists(img_path):
@@ -167,7 +177,7 @@ class Processing:
 
         return img_path_to_embs_and_masks
     
-    def cluster_embeddings(self, img_path_to_moto_embs, min_k: int = 10, max_k: int = 100):
+    def cluster_embeddings(self, img_path_to_moto_embs):
         all_embs = []
         img_paths = []
 
@@ -177,7 +187,7 @@ class Processing:
 
         X = np.array(all_embs)
 
-        cluster_id_to_elems = cluster_with_kmeans(X, min_k=min_k, max_k=max_k)
+        cluster_id_to_elems = cluster_with_kmeans(X, min_k=self.min_k, max_k=self.max_k)
         cluster_id_to_img_paths = []
         
         for cluster_elems in cluster_id_to_elems:
@@ -185,3 +195,15 @@ class Processing:
             cluster_id_to_img_paths.append(cluster_img_paths)
 
         return cluster_id_to_img_paths
+    
+    def save_cluster_images_in_different_folders(self, cluster_id_to_img_paths):
+        for cluster_id, src_img_paths in cluster_id_to_img_paths.items():
+            folder_name = f'folder_{cluster_id + 1}'
+            folder_path = os.path.join(self.results_folder, folder_name)
+
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path, exist_ok=True)
+
+            for img_path in src_img_paths:
+                new_img_path = os.path.join(folder_path, os.path.basename(img_path))
+                copy2(img_path, new_img_path)
