@@ -18,11 +18,12 @@ from src.stages import (
 class Processing:
     def __init__(
         self, images_folder: str,
-        results_folder: str,
+        results_folder: str = 'results',
         support_img_formats: Tuple[str] = ('jpg', 'png', 'cr2'),
         model_type: str = 'yolov8n-seg',
         person_label: int = 0, moto_label: int = 3,
         conf_thr: float = 0.2, iou_thr: float = 0.65,
+        first_part_processes: int = 4,
         hsv_flag: bool = True, intervals_count: int = 256,
         embedding_type: Literal['separate', 'union'] = 'separate',
         k_min: int = 10, k_max: int = 100,
@@ -49,6 +50,7 @@ class Processing:
             iou_thr=iou_thr,
         )
 
+        self.first_part_processes = first_part_processes
         self.hsv_flag = hsv_flag
         self.intervals_count = intervals_count
         self.embedding_type = embedding_type
@@ -207,3 +209,10 @@ class Processing:
             for img_path in src_img_paths:
                 new_img_path = os.path.join(folder_path, os.path.basename(img_path))
                 copy2(img_path, new_img_path)
+
+    def pipeline(self):
+        img_path_to_moto_embs = self.process_all_images(
+            processes=self.first_part_processes
+        )
+        cluster_id_to_img_paths = self.cluster_embeddings(img_path_to_moto_embs)
+        self.save_cluster_images_in_different_folders(cluster_id_to_img_paths)
