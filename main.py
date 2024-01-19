@@ -1,4 +1,5 @@
 import argparse
+from typing import Literal
 
 from src.pipeline import Processing
 
