@@ -8,7 +8,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--images_folder', type=str, nargs=1,
+        '--images_folder', type=str,
         help='Input folder with photos from motorace (all images should be in jpg, png or cr2 format)',
     )
     parser.add_argument(
@@ -28,7 +28,7 @@ if __name__ == '__main__':
         help='What color dimension use in color embeddings',
     )
     parser.add_argument(
-        '--embedding_type', type=Literal['separate', 'union'], default='union',
+        '--embedding_type', type=str, default='union',
         help='Type of embedding calculation: `separate` or `union` channels',
     )
     parser.add_argument(
