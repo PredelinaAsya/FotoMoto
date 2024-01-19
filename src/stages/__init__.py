@@ -1,3 +1,4 @@
 from .segment import Segmentator
 from .match_moto_with_pilot import match_motorcycles_and_pilots
 from .moto_embeddings import compute_embedding_by_separate_channels, compute_embedding_by_union_channels
+from .clustering import cluster_with_kmeans

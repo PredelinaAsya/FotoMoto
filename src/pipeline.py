@@ -9,7 +9,13 @@ import time
 import threading
 from typing import Tuple, Literal
 
-from src.stages import Segmentator, match_motorcycles_and_pilots, compute_embedding_by_separate_channels, compute_embedding_by_union_channels
+from src.stages import (
+    Segmentator,
+    match_motorcycles_and_pilots,
+    compute_embedding_by_separate_channels,
+    compute_embedding_by_union_channels,
+    cluster_with_kmeans,
+    )
 
 
 class Processing:
@@ -164,3 +170,22 @@ class Processing:
         }
 
         return img_path_to_embs_and_masks
+    
+    def cluster_embeddings(self, img_path_to_moto_embs, min_k: int = 10, max_k: int = 100):
+        all_embs = []
+        img_paths = []
+
+        for img_path, embs in img_path_to_moto_embs.items():
+            all_embs.extend(embs)
+            img_paths.extend([img_path] * len(embs))
+
+        X = np.array(all_embs)
+
+        cluster_id_to_elems = cluster_with_kmeans(X, min_k=min_k, max_k=max_k)
+        cluster_id_to_img_paths = []
+        
+        for cluster_elems in cluster_id_to_elems:
+            cluster_img_paths = [img_paths[elem_id] for elem_id in cluster_elems]
+            cluster_id_to_img_paths.append(cluster_img_paths)
+
+        return cluster_id_to_img_paths
