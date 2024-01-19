@@ -26,4 +26,4 @@ The proposed solution consists of the following steps:
 
 ## Demo
 
-...
+![Alt Text](./info/fotomoto_demo.gif)
